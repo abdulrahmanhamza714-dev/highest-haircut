@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Sharp Cut | Executive Command Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* --- SYSTEM CONFIGURATION & ROOT SETUP --- */
+        :root {
+            --primary: #d4af37; /* Gold Accent */
+            --bg-dark: #0f0f0f;
+            --bg-sidebar: #141414;
+            --bg-card: #1a1a1a;
+            --text-main: #ffffff;
+            --text-muted: #a0a0a0;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --pending: #f1c40f;
+            --font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--font);
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow-x: hidden;
+            display: flex;
+        }
+
+        /* --- DASHBOARD SIDEBAR CORE --- */
+        aside {
+            width: 280px;
+            background-color: var(--bg-sidebar);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            border-right: 1px solid #222;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 30px 20px;
+            z-index: 100;
+        }
+
+        .brand-logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .brand-logo span { color: var(--primary); }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 14px 20px;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background-color: rgba(212, 175, 55, 0.1);
+            color: var(--primary);
+        }
+
+        .nav-item i { font-size: 1.2rem; }
+
+        /* --- MAIN WORKSPACE ENVIRONMENT --- */
+        main {
+            margin-left: 280px;
+            width: calc(100% - 280px);
+            padding: 40px;
+            min-height: 100vh;
+        }
+
+        .view-panel {
+            display: none; /* Controlled dynamically via router script */
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .view-panel.active-panel { display: block; }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            border-bottom: 1px solid #222;
+            padding-bottom: 20px;
+        }
+
+        .dashboard-header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .dashboard-header h1 span { color: var(--primary); }
+
+        /* --- SALES & METRIC TRACKING CARDS --- */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .metric-card {
+            background-color: var(--bg-card);
+            border: 1px solid #222;
+            padding: 25px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: var(--transition);
+        }
+
+        .metric-card:hover { border-color: var(--primary); transform: translateY(-3px); }
+        .metric-data h3 { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 1px; }
+        .metric-data p { font-size: 1.8rem; font-weight: bold; }
+
+        .metric-card i {
+            font-size: 2.2rem;
+            color: var(--primary);
+            opacity: 0.8;
+            background: rgba(212, 175, 55, 0.05);
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        /* --- APPOINTMENT TRACKING LOGS TABLE --- */
+        .table-container {
+            background-color: var(--bg-card);
+            border: 1px solid #222;
+            border-radius: 8px;
+            padding: 30px;
+            overflow-x: auto;
+        }
+
+        .table-container h2 { font-size: 1.2rem; text-transform: uppercase; margin-bottom: 20px; letter-spacing: 0.5px; }
+        
+        table { width: 100%; border-collapse: collapse; text-align: left; min-width: 850px; }
+        th { padding: 16px; background: #111; color: var(--primary); text-transform: uppercase; font-size: 0.8rem; font-weight: 700; border-bottom: 2px solid #222; }
+        td { padding: 16px; border-bottom: 1px solid #222; font-size: 0.9rem; vertical-align: middle; }
+        tr:hover { background: rgba(255, 255, 255, 0.01); }
+
+        /* Status & Action Control Buttons */
+        .badge { padding: 5px 12px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; border-radius: 4px; }
+        .badge.confirmed { background: rgba(46, 204, 113, 0.15); color: var(--success); }
+        .badge.pending { background: rgba(241, 196, 15, 0.15); color: var(--pending); }
+        .badge.cancelled { background: rgba(231, 76, 60, 0.15); color: var(--danger); }
+
+        .action-cluster { display: flex; gap: 8px; }
+        .action-btn { padding: 6px 12px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; border: 1px solid transparent; cursor: pointer; transition: var(--transition); background: transparent; }
+        .action-btn.approve { border-color: var(--success); color: var(--success); }
+        .action-btn.approve:hover { background: var(--success); color: #000; }
+        .action-btn.cancel { border-color: var(--danger); color: var(--danger); }
+        .action-btn.cancel:hover { background: var(--danger); color: #fff; }
+
+        /* --- DYNAMIC CUSTOMER BOOKING MATRIX STYLE CONFIG --- */
+        .booking-workspace { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 40px; align-items: start; }
+        .calendar-box, .form-box { background: var(--bg-card); border: 1px solid #222; padding: 30px; border-radius: 8px; }
+        
+        .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .cal-nav { background: transparent; border: 1px solid var(--primary); color: var(--primary); padding: 6px 14px; cursor: pointer; }
+        .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; color: var(--primary); margin-bottom: 15px; }
+        .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+        
+        .day { aspect-ratio: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; background: var(--bg-dark); cursor: pointer; font-size: 0.95rem; border-radius: 4px; border: 1px solid transparent; transition: var(--transition); }
+        .day .slots { font-size: 0.65rem; color: var(--text-muted); margin-top: 4px; }
+        .day.empty { background: transparent; cursor: default; }
+        .day.available { border-bottom: 3px solid var(--success); }
+        .day.full { background: #241414; border-bottom: 3px solid var(--danger); cursor: not-allowed; }
+        .day.closed { background: #181818; color: #444; text-decoration: line-through; cursor: not-allowed; }
+        .day.selected { background: var(--primary) !important; color: #000 !important; font-weight: bold; }
+        .day.selected .slots { color: #000 !important; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; background: var(--bg-dark); border: 1px solid #222; color: #fff; border-radius: 4px; outline: none; }
+        .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+        
+        .write-in-field { display: none; animation: fadeIn 0.3s ease forwards; }
+        .checkout-summary { background: var(--bg-dark); border-left: 3px solid var(--primary); padding: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+        .checkout-summary span { color: var(--primary); font-weight: bold; font-size: 1.2rem; }
+
+        .submit-btn { width: 100%; background: var(--primary); color: #000; padding: 14px; border: none; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: var(--transition); }
+        .submit-btn:hover { background: #fff; box-shadow: 0 0 15px var(--primary); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <aside>
+        <div>
+            <div class="brand-logo">SHARP<span>CONTROL</span></div>
+            <div class="nav-menu">
+                <div class="nav-item active" data-target="salesOverviewPanel">
+                    <i class="fa-solid fa-chart-pie"></i> Sales & Analytics
+                </div>
+                <div class="nav-item" data-target="bookingRegistryPanel">
+                    <i class="fa-solid fa-list-check"></i> Booking Registry
+                </div>
+                <div class="nav-item" data-target="customerPortalPanel">
+                    <i class="fa-solid fa-desktop"></i> Front-End Booking
+                </div>
+            </div>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-muted); text-align: center;">
+            System Active &bull; v2.6
+        </div>
+    </aside>
+
+    <main>
+        
+        <div id="salesOverviewPanel" class="view-panel active-panel">
+            <div class="dashboard-header">
+                <h1>Live <span>Sales Performance</span></h1>
+                <div>Metrics updated real-time</div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-data">
+                        <h3>Gross Revenue</h3>
+                        <p>GH₵ <span id="revenueDisplay">0</span></p>
+                    </div>
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-data">
+                        <h3>Active Bookings</h3>
+                        <p id="activeCountDisplay">0</p>
+                    </div>
+                    <i class="fa-solid fa-calendar-check"></i>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-data">
+                        <h3>Average Ticket</h3>
+                        <p>GH₵ <span id="avgTicketDisplay">0</span></p>
+                    </div>
+                    <i class="fa-solid fa-calculator"></i>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-data">
+                        <h3>Style Add-On Sales</h3>
+                        <p>GH₵ <span id="addonSalesDisplay">0</span></p>
+                    </div>
+                    <i class="fa-solid fa-scissors"></i>
+                </div>
+            </div>
+        </div>
+
+        <div id="bookingRegistryPanel" class="view-panel">
+            <div class="dashboard-header">
+                <h1>Appointment <span>Registry</span></h1>
+                <div>Review, confirm, or cancel operational requests</div>
+            </div>
+
+            <div class="table-container">
+                <h2>Live Tracking Log</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Target Date</th>
+                            <th>Client Name</th>
+                            <th>Phone Contact</th>
+                            <th>Base Menu Service</th>
+                            <th>Style Customization</th>
+                            <th>Gross Total</th>
+                            <th>Status</th>
+                            <th>Operational Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="registryTableBody">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="customerPortalPanel" class="view-panel">
+            <div class="dashboard-header">
+                <h1>Front-End <span>Booking Matrix</span></h1>
+                <div>Customer booking window simulator</div>
+            </div>
+
+            <div class="booking-workspace">
+                <div class="calendar-box">
+                    <div class="cal-header">
+                        <h3 id="calendarMonthYear">June 2026</h3>
+                        <div>
+                            <button class="cal-nav" id="prevMonthBtn"><i class="fa-solid fa-chevron-left"></i></button>
+                            <button class="cal-nav" id="nextMonthBtn"><i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="weekdays">
+                        <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+                    </div>
+                    <div class="days-grid" id="calendarDaysGrid"></div>
+                </div>
+
+                <div class="form-box">
+                    <form id="kioskBookingForm">
+                        <div class="form-group">
+                            <label>Target Execution Date</label>
+                            <input type="text" id="formDateInput" placeholder="Select available day from matrix" readonly required>
+                        </div>
+                        <div class="form-group">
+                            <label>Base Menu Service</label>
+                            <select id="formServiceSelect" required>
+                                <option value="0" data-name="None">-- Select Base --</option>
+                                <option value="120" data-name="Classic Haircut">Classic Haircut (GH₵ 120)</option>
+                                <option value="80" data-name="Signature Beard Shave">Signature Beard Shave (GH₵ 80)</option>
+                                <option value="180" data-name="The Full Package">The Full Package (GH₵ 180)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Style Add-On Tier</label>
+                            <select id="formStyleSelect" required>
+                                <option value="0" data-name="Standard Base" data-addon="0">Standard Baseline Trim (+ GH₵ 0)</option>
+                                <option value="30" data-name="High Skin Fade" data-addon="30">High Skin Fade (+ GH₵ 30)</option>
+                                <option value="25" data-name="Textured Waves" data-addon="25">Textured Waves Line (+ GH₵ 25)</option>
+                                <option value="40" data-name="Classic Pompadour Cut" data-addon="40">Classic Pompadour Style Cut (+ GH₵ 40)</option>
+                                <option value="custom" data-name="Custom Style" data-addon="15">Custom Style (Write-In... + GH₵ 15)</option>
+                            </select>
+                        </div>
+                        <div class="form-group write-in-field" id="formWriteInGroup">
+                            <label>Describe Your Custom Style Request</label>
+                            <input type="text" id="formWriteInInput" placeholder="e.g., Low drop fade with lightning bolt line">
+                        </div>
+
+                        <div class="checkout-summary">
+                            <p>Estimated Invoice Total:</p>
+                            <p>GH₵ <span id="formPriceDisplay">0</span></p>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Client Name</label>
+                            <input type="text" id="formClientName" required placeholder="First and last name">
+                        </div>
+                        <div class="form-group">
+                            <label>Phone Line</label>
+                            <input type="tel" id="formClientPhone" required placeholder="e.g., 024XXXXXXX">
+                        </div>
+
+                        <button type="submit" class="submit-btn">Dispatch Ticket</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        /* --- SIDEBAR ROUTER ENGINE --- */
+        const navItems = document.querySelectorAll('.nav-item');
+        const viewPanels = document.querySelectorAll('.view-panel');
+
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                navItems.forEach(nav => nav.classList.remove('active'));
+                viewPanels.forEach(panel => panel.classList.remove('active-panel'));
+
+                item.classList.add('active');
+                const targetPanel = item.getAttribute('data-target');
+                document.getElementById(targetPanel).classList.add('active-panel');
+                
+                if(targetPanel === 'salesOverviewPanel' || targetPanel === 'bookingRegistryPanel') {
+                    recalculateMetricsAndLogs();
+                }
+            });
+        });
+
+        /* --- TRANSACTION MEMORY & SEED DATA --- */
+        const capacityDb = { "2026-5-5": 2, "2026-5-15": 15 };
+        const MAX_CAPACITY = 15;
+
+        let memoryLogs = [
+            { id: 1, rawKey: "2026-5-5", date: "June 5, 2026", name: "Kwame Asante", phone: "0244112233", base: "Classic Haircut", basePrice: 120, style: "High Skin Fade", addonPrice: 30, total: 150, status: "confirmed" },
+            { id: 2, rawKey: "2026-5-5", date: "June 5, 2026", name: "Abigail Mensah", phone: "0209887766", base: "The Full Package", basePrice: 180, style: "Textured Waves", addonPrice: 25, total: 205, status: "pending" },
+            { id: 3, rawKey: "2026-5-15", date: "June 15, 2026", name: "Kofi Boateng", phone: "0553221100", base: "Signature Beard Shave", basePrice: 80, style: "Standard Base", addonPrice: 0, total: 80, status: "cancelled" }
+        ];
+
+        /* --- METRICS ENGINE & DATA STREAM INTEGRATION --- */
+        const revenueDisplay = document.getElementById('revenueDisplay');
+        const activeCountDisplay = document.getElementById('activeCountDisplay');
+        const avgTicketDisplay = document.getElementById('avgTicketDisplay');
+        const addonSalesDisplay = document.getElementById('addonSalesDisplay');
+        const registryTableBody = document.getElementById('registryTableBody');
+
+        function recalculateMetricsAndLogs() {
+            registryTableBody.innerHTML = '';
+            let grossRevenue = 0;
+            let activeBookingsCount = 0;
+            let styleAddonSales = 0;
+
+            memoryLogs.forEach(log => {
+                if(log.status === 'confirmed' || log.status === 'pending') {
+                    grossRevenue += log.total;
+                    styleAddonSales += log.addonPrice;
+                    activeBookingsCount++;
+                }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${log.date}</td>
+                    <td><strong>${log.name}</strong></td>
+                    <td>${log.phone}</td>
+                    <td>${log.base}</td>
+                    <td><span style="color: var(--primary);">${log.style}</span></td>
+                    <td><strong>GH₵ ${log.total}</strong></td>
+                    <td><span class="badge ${log.status}">${log.status}</span></td>
+                    <td class="action-cluster">
+                        ${log.status === 'pending' ? `<button class="action-btn approve" onclick="updateStatus(${log.id}, 'confirmed')">Confirm</button>` : ''}
+                        ${log.status !== 'cancelled' ? `<button class="action-btn cancel" onclick="updateStatus(${log.id}, 'cancelled')">Cancel</button>` : `<span style="color:#444;">Settled</span>`}
+                    </td>
+                `;
+                registryTableBody.appendChild(tr);
+            });
+
+            revenueDisplay.innerText = grossRevenue;
+            activeCountDisplay.innerText = activeBookingsCount;
+            avgTicketDisplay.innerText = activeBookingsCount > 0 ? Math.round(grossRevenue / activeBookingsCount) : 0;
+            addonSalesDisplay.innerText = styleAddonSales;
+        }
+
+        window.updateStatus = function(id, nextStatus) {
+            const ticket = memoryLogs.find(l => l.id === id);
+            if(ticket) {
+                if(nextStatus === 'cancelled' && ticket.status !== 'cancelled') {
+                    if(capacityDb[ticket.rawKey]) capacityDb[ticket.rawKey]--;
+                }
+                ticket.status = nextStatus;
+                recalculateMetricsAndLogs();
+                renderMatrixCalendar();
+            }
+        };
+
+        /* --- FRONT-END INTERACTIVE INVOICING & CALENDAR ENGINE --- */
+        const formServiceSelect = document.getElementById('formServiceSelect');
+        const formStyleSelect = document.getElementById('formStyleSelect');
+        const formWriteInGroup = document.getElementById('formWriteInGroup');
+        const formWriteInInput = document.getElementById('formWriteInInput');
+        const formPriceDisplay = document.getElementById('formPriceDisplay');
+        const formDateInput = document.getElementById('formDateInput');
+
+        function updateFormEstimate() {
+            const baseValue = parseInt(formServiceSelect.value) || 0;
+            let addonValue = 0;
+
+            if(formStyleSelect.value === 'custom') {
+                addonValue = 15;
+            } else {
+                addonValue = parseInt(formStyleSelect.options[formStyleSelect.selectedIndex].getAttribute('data-addon')) || 0;
+            }
+            formPriceDisplay.innerText = baseValue + addonValue;
+        }
+
+        formServiceSelect.addEventListener('change', updateFormEstimate);
+        formStyleSelect.addEventListener('change', () => {
+            if(formStyleSelect.value === 'custom') {
+                formWriteInGroup.style.display = 'block';
+                formWriteInInput.setAttribute('required', 'true');
+            } else {
+                formWriteInGroup.style.display = 'none';
+                formWriteInInput.removeAttribute('required');
+                formWriteInInput.value = '';
+            }
+            updateFormEstimate();
+        });
+
+        // Calendar Architecture
+        const calendarMonthYear = document.getElementById('calendarMonthYear');
+        const calendarDaysGrid = document.getElementById('calendarDaysGrid');
+        let viewDate = new Date(2026, 5, 1); // June 2026
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        let activeSelectedKey = "";
+
+        function renderMatrixCalendar() {
+            const year = viewDate.getFullYear();
+            const month = viewDate.getMonth();
+            calendarMonthYear.innerText = `${monthNames[month]} ${year}`;
+            calendarDaysGrid.innerHTML = '';
+
+            const padDays = new Date(year, month, 1).getDay();
+            const boundaryDays = new Date(year, month + 1, 0).getDate();
+
+            for(let i = 0; i < padDays; i++) {
+                const pad = document.createElement('div');
+                pad.classList.add('day', 'empty');
+                calendarDaysGrid.appendChild(pad);
+            }
+
+            for(let day = 1; day <= boundaryDays; day++) {
+                const dayNode = document.createElement('div');
+                dayNode.classList.add('day');
+                
+                const dayLabel = document.createElement('span');
+                dayLabel.innerText = day;
+                dayNode.appendChild(dayLabel);
+
+                const statsLabel = document.createElement('span');
+                statsLabel.classList.add('slots');
+
+                const weekdayIndex = new Date(year, month, day).getDay();
+                const key = `${year}-${month}-${day}`;
+                const allocatedLoad = capacityDb[key] || 0;
+
+                if(weekdayIndex === 0) {
+                    dayNode.classList.add('closed');
+                    statsLabel.innerText = "Closed";
+                } else if(allocatedLoad >= MAX_CAPACITY) {
+                    dayNode.classList.add('full');
+                    statsLabel.innerText = "Full";
+                } else {
+                    dayNode.classList.add('available');
+                    statsLabel.innerText = `${MAX_CAPACITY - allocatedLoad} open`;
+
+                    dayNode.addEventListener('click', () => {
+                        document.querySelectorAll('.day').forEach(d => d.classList.remove('selected'));
+                        dayNode.classList.add('selected');
+                        formDateInput.value = `${monthNames[month]} ${day}, ${year}`;
+                        activeSelectedKey = key;
+                    });
+                }
+                dayNode.appendChild(statsLabel);
+                calendarDaysGrid.appendChild(dayNode);
+            }
+        }
+
+        document.getElementById('prevMonthBtn').addEventListener('click', () => { viewDate.setMonth(viewDate.getMonth() - 1); renderMatrixCalendar(); });
+        document.getElementById('nextMonthBtn').addEventListener('click', () => { viewDate.setMonth(viewDate.getMonth() + 1); renderMatrixCalendar(); });
+
+        /* --- TRANSACTION DISPATCH PIPELINE --- */
+        document.getElementById('kioskBookingForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const basePrice = parseInt(formServiceSelect.value);
+            let addonPrice = 0;
+            let styleLabel = formStyleSelect.options[formStyleSelect.selectedIndex].getAttribute('data-name');
+
+            if(formStyleSelect.value === 'custom') {
+                addonPrice = 15;
+                styleLabel = `Custom: ${formWriteInInput.value}`;
+            } else {
+                addonPrice = parseInt(formStyleSelect.options[formStyleSelect.selectedIndex].getAttribute('data-addon'));
+            }
+
+            memoryLogs.push({
+                id: Date.now(),
+                rawKey: activeSelectedKey,
+                date: formDateInput.value,
+                name: document.getElementById('formClientName').value,
+                phone: document.getElementById('formClientPhone').value,
+                base: formServiceSelect.options[formServiceSelect.selectedIndex].getAttribute('data-name'),
+                basePrice: basePrice,
+                style: styleLabel,
+                addonPrice: addonPrice,
+                total: basePrice + addonPrice,
+                status: "pending"
+            });
+
+            capacityDb[activeSelectedKey] = (capacityDb[activeSelectedKey] || 0) + 1;
+            alert("Ticket Dispatched Successfully! Pending confirmation inside your Registry.");
+            
+            e.target.reset();
+            formWriteInGroup.style.display = 'none';
+            formPriceDisplay.innerText = '0';
+            document.querySelectorAll('.day').forEach(d => d.classList.remove('selected'));
+            
+            renderMatrixCalendar();
+        });
+
+        // Initialize Data Load Layer
+        recalculateMetricsAndLogs();
+        renderMatrixCalendar();
+    </script>
+</body>
+</html>
